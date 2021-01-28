@@ -1,0 +1,104 @@
+#include "RPNCalculator.hpp"
+using namespace std;
+
+RPNCalculator::RPNCalculator()
+{
+    stackHead = NULL;
+}
+RPNCalculator::~RPNCalculator()
+{
+    while (!isEmpty())
+    {
+        pop();
+    }
+}
+bool RPNCalculator::isEmpty()
+{
+    if (stackHead == NULL)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+void RPNCalculator::push(float newnumber)
+{
+    Operand* newOperand;
+    newOperand->number = number;
+    newOperand->next = stackHead;
+    stackHead = newOperand;
+}
+void RPNCalculator::pop()
+{
+    if(isEmpty())
+    {
+        cout << "Stack empty, cannot pop an item." << endl;
+        return;
+    }
+    Operand *temp = new Operand;
+    temp = stackHead->next;
+    delete stackHead;
+    stackHead = temp;
+}
+Operand* RPNCalculator::peek()
+{
+    if(isEmpty())
+    {
+        cout << "Stack empty, cannot peek." << endl;
+        return NULL;
+    }
+    return stackHead;
+}
+bool RPNCalculator::compute(string symbol)
+{
+    float var1, var2, solution;
+    if(symbol.compare("+")==0)
+    {
+        if(isEmpty())
+        {
+            cout << "err: not enough operands" << endl;
+            return false;
+        }
+        var1 = stackHead->number;
+        pop();
+        if(isEmpty())
+        {
+            cout << "err: not enough operands" << endl;
+            push(var1);
+            return false;
+        }
+        var2 = stackHead->number;
+        pop();
+        solution = var1+var2;
+        push(solution);
+        return true;
+    }
+    else if(symbol.compare("*"))
+    {
+        if(isEmpty())
+        {
+            cout << "err: not enough operands" << endl;
+            return false;
+        }
+        var1 = stackHead->number;
+        pop();
+        if(isEmpty())
+        {
+            cout << "err: not enough operands" << endl;
+            push(var1);
+            return false;
+        }
+        var2 = stackHead->number;
+        pop();
+        solution = var1*var2;
+        push(solution);
+        return true;
+    }
+    else
+    {
+        cout << "err: invalid operation" << endl;
+        return false;
+    }
+}

@@ -1,0 +1,336 @@
+#include <iostream>
+#include <fstream>
+#include "MovieTree.hpp"
+
+using namespace std;
+
+/* ------------------------------------------------------ */
+MovieTree::MovieTree()
+{
+	root = NULL;
+}
+
+void deleteLinkedList(TreeNode *tn)
+{
+    while(tn->head != NULL)
+    {
+        LLMovieNode *llHead = tn->head;
+        tn->head = tn->head->next;
+        delete llHead;
+    }
+}
+
+void recursiveDestruct(TreeNode *tn)
+{
+    if(tn->leftChild == NULL && tn->rightChild == NULL)
+    {
+        deleteLinkedList(tn);
+        delete tn;
+        return;
+    }
+    else
+    {
+        if(tn->leftChild != NULL) recursiveDestruct(tn->leftChild);
+        if(tn->rightChild != NULL) recursiveDestruct(tn->rightChild);
+        deleteLinkedList(tn);
+        delete tn;
+    }
+    
+}
+MovieTree::~MovieTree()
+{
+    if(root != NULL) recursiveDestruct(root);
+}
+
+void recursivePrintInventory(TreeNode* tn)
+{
+    if(tn == NULL)
+    {
+        return;
+    }
+    else
+    {
+        recursivePrintInventory(tn->leftChild);
+        cout << "Movies starting with letter: " << tn->titleChar << endl;
+        LLMovieNode* temp = tn->head;
+        while(temp != NULL)
+        {
+            cout << " >> " << temp->title << " " << temp->rating << endl;
+            temp = temp->next;
+        }
+        recursivePrintInventory(tn->rightChild);
+    }  
+}
+
+void MovieTree::printMovieInventory()
+{
+    recursivePrintInventory(root);
+    return;
+}
+
+void MovieTree::addMovie(int ranking, string title, int year, float rating)
+{
+    char tChar = title[0];
+    if(root == NULL)
+    {
+        TreeNode* newNode = new TreeNode;
+        newNode->titleChar = tChar;
+        root = newNode;
+    }
+    if(searchChar(tChar) == NULL)
+    {
+        TreeNode* temp = root;
+        bool run = true;
+        while((temp->leftChild != NULL || temp->rightChild != NULL) && run)
+        {
+            if(tChar < temp->titleChar && temp->leftChild != NULL) temp = temp->leftChild;
+            else if(tChar > temp->titleChar && temp->rightChild != NULL) temp = temp->rightChild;
+            else run = false;
+        }
+        if(tChar < temp->titleChar)
+        {
+            TreeNode* newNode = new TreeNode;
+            temp->leftChild = newNode;
+            newNode->titleChar = tChar;
+            newNode->parent = temp;
+        }
+        if(tChar > temp->titleChar)
+        {
+            TreeNode* newNode = new TreeNode;
+            temp->rightChild = newNode;
+            newNode->titleChar = tChar;
+            newNode->parent = temp;
+        }
+    }
+    if(searchChar(tChar)->head == NULL)
+    {
+        LLMovieNode *newNode = new LLMovieNode(ranking, title, year, rating);
+        searchChar(tChar)->head = newNode;
+        return;
+    }
+    LLMovieNode *temp = searchChar(tChar)->head;
+    if(title.compare(temp->title) < 0)
+    {
+        LLMovieNode *newNode = new LLMovieNode(ranking, title, year, rating);
+        newNode->next = temp;
+        searchChar(tChar)->head = newNode;
+        return;
+    }
+    bool run2 = true;
+    while(temp->next != NULL && run2) //find the node before inserted node
+    {
+        if(title.compare((temp->next)->title) > 0) temp = temp->next;
+        else run2 = false;
+    }
+    LLMovieNode *newNode = new LLMovieNode(ranking, title, year, rating);
+    newNode->next = temp->next;
+    temp->next = newNode;
+    return;
+}
+
+void MovieTree::deleteMovie(std::string title)
+{
+    char tChar = title[0];
+    bool found = false;
+    TreeNode* tempTN = searchChar(tChar); //find tree node for first letter
+    if(tempTN == NULL)
+    {
+        cout << "Movie: " << title << " not found, cannot delete." << endl;
+        return;
+    }
+    LLMovieNode* tempMN = tempTN->head;
+    LLMovieNode* prev;
+    if(tempMN->title.compare(title) == 0) //if movie is head of tree node
+    {
+        tempTN->head = tempMN->next;
+        delete tempMN;
+        found = true;
+    }
+    else
+    {
+        while(tempMN != NULL && !found) //find movie node in linked list
+        {
+            if(tempMN->title.compare(title) == 0)
+            {
+                found = true;
+            }
+            else
+            {
+                prev = tempMN;
+                tempMN = tempMN->next;
+            }
+        }
+        if(!found)
+        {
+            cout << "Movie: " << title << " not found, cannot delete." << endl;
+            return;
+        }
+        prev->next = tempMN->next;
+        delete tempMN;
+    }
+    if(tempTN->head != NULL) return;
+    else //delete tree node
+    {
+        // if(tempTN == root && tempTN->leftChild == NULL && tempTN->rightChild == NULL)
+        // {
+        //     delete tempTN;
+        //     return;
+        // }
+        if(tempTN->leftChild == NULL && tempTN->rightChild == NULL){
+            if(tempTN->parent == NULL)
+            {
+                cout << "deleting root node" << endl;
+                delete tempTN;
+                root = NULL;
+                return;
+            }
+            TreeNode *parent = tempTN->parent;
+            if(parent->titleChar > tempTN->titleChar){
+                    parent->leftChild = NULL;
+            }
+            else{
+                parent->rightChild = NULL;
+            }
+            delete tempTN;
+        }    
+        else if(tempTN->leftChild == NULL){
+            TreeNode *temp = tempTN->rightChild;
+            if(tempTN == root){
+                root->rightChild = temp->rightChild;
+                root->head = temp->head;
+                root->leftChild = tempTN->leftChild;
+                root->titleChar = temp->titleChar;
+            }
+            else{
+                TreeNode *parent = tempTN->parent;
+                if(parent->titleChar > tempTN->titleChar){
+                    parent->leftChild->head = temp->head;
+                    parent->leftChild->leftChild = temp->leftChild;
+                    parent->leftChild->rightChild = temp->rightChild;
+                    parent->leftChild->titleChar = temp->titleChar;
+                }
+                else{
+                    parent->rightChild->head = temp->head;
+                    parent->rightChild->leftChild = temp->leftChild;
+                    parent->rightChild->rightChild = temp->rightChild;
+                    parent->rightChild->titleChar = temp->titleChar;
+                }
+            }
+        }
+        else if(tempTN->rightChild == NULL){
+            TreeNode *temp = tempTN->leftChild;
+            if(tempTN == root){
+                root->rightChild = temp->rightChild;
+                root->head = temp->head;
+                root->leftChild = temp->leftChild;
+                root->titleChar = temp->titleChar;
+            }
+            else{
+                TreeNode *parent = tempTN->parent;
+                if(parent->titleChar > tempTN->titleChar){
+                    parent->leftChild->head = temp->head;
+                    parent->leftChild->leftChild = temp->leftChild;
+                    parent->leftChild->rightChild = temp->rightChild;
+                    parent->leftChild->titleChar = temp->titleChar;
+                }
+                else{
+                    parent->rightChild->head = temp->head;
+                    parent->rightChild->leftChild = temp->leftChild;
+                    parent->rightChild->rightChild = temp->rightChild;
+                    parent->rightChild->titleChar = temp->titleChar;
+                }
+            }
+        }
+        else{
+           TreeNode *temp = tempTN->rightChild;
+            while(temp->leftChild != NULL){
+                temp = temp->leftChild;
+            }
+            if(tempTN == root){
+                root->rightChild = tempTN->rightChild;
+                root->head = temp->head;
+                root->leftChild = tempTN->leftChild;
+                root->titleChar = temp->titleChar;
+            }
+            else{
+                TreeNode *parent = tempTN->parent;
+                if(parent->titleChar > tempTN->titleChar){
+                    parent->leftChild->head = temp->head;
+                    parent->leftChild->leftChild = temp->leftChild;
+                    parent->leftChild->rightChild = temp->rightChild;
+                    parent->leftChild->titleChar = temp->titleChar;
+                }
+                else{
+                    parent->rightChild->head = temp->head;
+                    parent->rightChild->leftChild = temp->leftChild;
+                    parent->rightChild->rightChild = temp->rightChild;
+                    parent->rightChild->titleChar = temp->titleChar;
+                }
+                delete tempTN;
+            }
+            temp->parent->leftChild = temp->rightChild;
+            delete temp;
+        }
+    }
+}
+
+void MovieTree::leftRotation(TreeNode* curr)
+{
+    TreeNode * newParent = curr->parent;
+    if(root == curr)
+    {
+        TreeNode *temp = curr->rightChild;
+        curr->rightChild = temp->leftChild;
+        root = temp;
+        temp->leftChild = curr;
+        curr->parent = temp;
+        root->parent = NULL;
+
+    }
+    else if(newParent->rightChild == curr)
+    {
+        TreeNode *temp = curr->rightChild;
+        curr->rightChild = temp->leftChild;
+        curr->parent->rightChild = temp;
+        temp->leftChild = curr;
+        temp->parent = curr->parent;
+        curr->parent = temp;
+
+    }
+}
+//------ Given Methods--------//
+void _grader_inorderTraversal(TreeNode * root)
+{
+	if (root == NULL) {
+		return;
+	}
+
+	_grader_inorderTraversal(root->leftChild);
+	cout << root->titleChar << " ";
+	_grader_inorderTraversal(root->rightChild);
+}
+
+
+void MovieTree::inorderTraversal() {
+	_grader_inorderTraversal(root);
+	cout << endl;
+}
+
+
+
+TreeNode* searchCharHelper(TreeNode* curr, char key)
+{
+    if (curr == NULL)
+        return curr;
+    else if(curr->titleChar == key)
+        return curr;
+    else if (curr->titleChar > key)
+        return searchCharHelper(curr->leftChild, key);
+    else
+        return searchCharHelper(curr->rightChild, key);
+}
+
+TreeNode* MovieTree::searchChar(char key)
+{
+    return searchCharHelper(root, key);
+}
